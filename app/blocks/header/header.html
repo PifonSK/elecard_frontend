@@ -1,0 +1,39 @@
+<section class="header">
+	<div class="container header__container">
+		<img src="./images/header__logo.png" alt="Галерея" class="header__logo">
+		<div class="header__settings">
+			<div class="header__block" id="header__sort">
+				<form>
+					<p><b>Произвести сортировку:</b></p>
+					<label class="header__block-item">
+						<input type="radio" value="name" name="sort">по имени
+					</label>
+					<label class="header__block-item">
+						<input type="radio" value="category" name="sort">по категории
+					</label>
+					<label class="header__block-item">
+						<input type="radio" value="date" name="sort">по дате
+					</label>
+					<label class="header__block-item">
+						<input type="radio" value="filesize" name="sort">по размеру
+					</label>
+				</form>
+			</div>
+			<div class="header__block" id="header__view">
+				<form>
+					<p><b>Изменить вид:</b></p>
+					<label class="header__block-item">
+						<input type="radio" value="cards" checked name="view">карточки
+					</label>
+					<label class="header__block-item">
+						<input type="radio" value="tree" name="view">дерево
+					</label>
+				</form>
+			</div>
+			<div class="header__block" id="header__reboot">
+				<p><b>Сбросить состояние:</b></p>
+				<button class="header__reset" onclick="resetList()">Сброс</button>
+			</div>
+		</div>
+	</div>
+</section>
