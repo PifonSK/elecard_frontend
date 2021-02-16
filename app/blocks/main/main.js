@@ -63,7 +63,6 @@ function loadList() {
 
 //очищает контейнер, затем заполняет его элементами из itemList
 function displayList() {
-    console.time(displayList);
     main__container.innerHTML = '';
     let currentPage = 0;    
     itemList.forEach(function(item, i) {
@@ -96,7 +95,6 @@ function displayList() {
             main__page.insertAdjacentHTML('beforeend', newItem);
         };
     });
-    console.timeEnd(displayList);
 };
 
 //расчитывает и рендерит пагинацию
@@ -216,14 +214,12 @@ function showCards(){
 
 //отображает вид - "Дерево"
 function showTree(){
-    console.time('showTree');
     itemList = JSON.parse(localStorage.getItem('storage'));
     displayTree(itemList);
     $('.main__container').hide();
     $('.footer__pagination').hide();
     $('#header__sort').fadeTo(100, 0);
     $('.main__tree').show();
-    console.timeEnd('showTree');
 };
 
 //по нажатию кнопки Сброс очищает localStorage, загружает исходный каталог и выодит на страницу элементы из itemList
@@ -249,7 +245,6 @@ function getCategories(data) {
 
 //строим дерево
 function displayTree(data){
-    console.time('displayTree');
     main__tree.innerHTML = '';
     let i=0;
     main__tree.insertAdjacentHTML('beforeend', `<ul><li><span class="show">Категории</span><ul id="main__category-root"></ul></li></ul>`);
@@ -276,7 +271,6 @@ function displayTree(data){
             };
         };
     });
-    console.timeEnd('displayTree');
 };
 
 //по клику на любом элементе main__tree сворачивает или разворачивает
