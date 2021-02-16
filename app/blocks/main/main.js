@@ -1,32 +1,69 @@
 let itemList = [];
+let defaultItemList;
+let itemDelList = [];
 const main__container = document.querySelector('.main__container');
 const main__tree = document.querySelector('.main__tree');
 const footer__pagination = document.querySelector('.footer__pagination');
 const sort = document.querySelector('input[name="sort"]');
-let perPageItems = 64;
+let perPageItems = 60;
 
-//если в localStorage есть записанное состояние каталога, то пердать в массив это состояние и отобразить каталог
-//если в localStorage нет записанного каталога, то отобразить исходный каталог
-if(localStorage.getItem('storage')) {
-    itemList = JSON.parse(localStorage.getItem('storage'));
-    reloadList(perPageItems);
-    displayTree(itemList);
-}else{
-    loadList();
+document.addEventListener('DOMContentLoaded', checkStorage());
+
+//проверяет записано ли что-то в localStorage
+function checkStorage(){
+    //если в localStorage есть записанное состояние каталога (storage), то пердать в массив это состояние и отобразить каталог
+    //если в localStorage нет записанного каталога, то отобразить исходный каталог
+    if(localStorage.getItem('storage')) {
+        itemList = JSON.parse(localStorage.getItem('storage'));
+        reloadList(perPageItems);
+        displayTree(itemList);
+    }else{
+        loadList();
+    };
+
+    //если в localStorage есть записанное состояние сортировки (sort), то выбрать его
+    //если в localStorage нет записанного состояния сортировки, то выбрать дефолтное
+    if(localStorage.getItem('sort')) {
+        let sortType = localStorage.getItem('sort');
+        $(`input[value="${sortType}"]`).prop('checked', true);
+    }else{
+        $(`input[value="default"]`).prop('checked', true);
+    };
+
+    //если в localStorage есть записанное состояние вида (view), то выбрать его
+    //если в localStorage нет записанного состояния вида, то выбрать карточки
+    if(localStorage.getItem('view')) {
+        let viewType = localStorage.getItem('view');
+        $(`input[value="${viewType}"]`).prop('checked', true);
+        if($("[name=view]:checked").val() === "tree"){
+            showTree();
+        };
+    }else{
+        $(`input[value="cards"]`).prop('checked', true);
+    };
+
+    //если в localStorage есть записанное состояние каталога удаленных элементов (delStorage), то передать его в массив itemDelList
+    //если в localStorage нет записанного каталога, по передать в itemDelList пустой массив
+    if(localStorage.getItem('delStorage')) {
+        itemDelList = JSON.parse(localStorage.getItem('delStorage'));
+    }else{
+        itemDelList = [];
+    };
 };
 
 //подключение JSON-каталога и передача в массив itemList
 function loadList() {
     $.getJSON("http://contest.elecard.ru/frontend_data/catalog.json", function(catalog) {
         itemList = catalog; 
+        localStorage.setItem('defaultStorage', JSON.stringify(itemList));
         localStorage.setItem('storage', JSON.stringify(itemList));
         reloadList(perPageItems);
-        displayTree(itemList);
     });
 };
 
 //очищает контейнер, затем заполняет его элементами из itemList
 function displayList() {
+    console.time(displayList);
     main__container.innerHTML = '';
     let currentPage = 0;    
     itemList.forEach(function(item, i) {
@@ -50,15 +87,16 @@ function displayList() {
             <div class="main__page" type="${currentPage}" id="page_${currentPage}"></div>
         `;
         if(i % perPageItems === 0){
-            main__container.innerHTML += newPage;
+            main__container.insertAdjacentHTML('beforeend', newPage);
             let main__page = document.querySelector(`#page_${currentPage}`);
-            main__page.innerHTML += newItem;
+            main__page.insertAdjacentHTML('beforeend', newItem);
             currentPage++;
         }else{
             let main__page = document.querySelector(`#page_${currentPage - 1}`);
-            main__page.innerHTML += newItem;
+            main__page.insertAdjacentHTML('beforeend', newItem);
         };
     });
+    console.timeEnd(displayList);
 };
 
 //расчитывает и рендерит пагинацию
@@ -77,7 +115,7 @@ function createPagination(perPageItems){
         let paginationItem = `
         <li class="page-item" type="${n}" onclick="showPage(this)"><a class="page-link" href="#">${n+1}</a></li>
         `;
-        footer__paginationItems.innerHTML += paginationItem;
+        footer__paginationItems.insertAdjacentHTML('beforeend', paginationItem);
     };
 };
 
@@ -85,15 +123,16 @@ function createPagination(perPageItems){
 //массив с объектами записывается в localStorage
 function deleteItem(elem){
     let m = $(elem).parents('.main__item').attr('id');
-    itemList.forEach(function(item, i){
+    itemList.forEach(function(item, i){ 
         if (`item_${i}` === m){
-            $(`#item_${i}`).fadeTo(500, 0, function(){
+            $(`#item_${i}`).fadeTo(80, 0, function(){
+                itemDelList.push(itemList[i]);
                 itemList.splice(i, 1);
                 displayList();
                 createPagination(perPageItems);
-                displayTree(itemList);
                 showPage($('.page-item[type="' + $(elem).parents('.main__page').attr('type') + '"]'));
                 localStorage.setItem('storage', JSON.stringify(itemList));
+                localStorage.setItem('delStorage', JSON.stringify(itemDelList));
             });
         };
     });
@@ -119,7 +158,7 @@ function reloadList(perPageItems){
     displayList();
     createPagination(perPageItems);
     resetPagination();
-}
+};
 
 //сортировка
 if (document.querySelector('input[name="sort"]')) {
@@ -127,6 +166,11 @@ if (document.querySelector('input[name="sort"]')) {
         elem.addEventListener("change", function(event) {
             let sortType = event.target.value;
             switch (sortType) {
+                case "default":
+                    itemList = JSON.parse(localStorage.getItem('defaultStorage'));
+                    let diff = itemList.filter(x => !itemDelList.some(y => x.image === y.image));
+                    itemList = diff;
+                    break;
                 case "category":
                     itemList.sort((a, b) => a.category > b.category ? 1 : -1);
                     break;
@@ -140,7 +184,8 @@ if (document.querySelector('input[name="sort"]')) {
                     itemList.sort((a, b) => a.filesize > b.filesize ? 1 : -1);
                     break;
             };
-            localStorage.setItem('storage', JSON.stringify(itemList));
+            localStorage.setItem("sort", event.target.value);
+            localStorage.setItem("storage", JSON.stringify(itemList));
             reloadList(perPageItems);
         });
     });
@@ -156,6 +201,7 @@ if (document.querySelector('input[name="view"]')) {
             }else if(sortType === "tree"){
                 showTree();
             };
+            localStorage.setItem("view", event.target.value);
         });
     });
 };
@@ -170,19 +216,21 @@ function showCards(){
 
 //отображает вид - "Дерево"
 function showTree(){
+    console.time('showTree');
+    itemList = JSON.parse(localStorage.getItem('storage'));
+    displayTree(itemList);
     $('.main__container').hide();
     $('.footer__pagination').hide();
     $('#header__sort').fadeTo(100, 0);
     $('.main__tree').show();
+    console.timeEnd('showTree');
 };
 
 //по нажатию кнопки Сброс очищает localStorage, загружает исходный каталог и выодит на страницу элементы из itemList
 function resetList() {
     localStorage.clear();
-    $('input[name="sort"]').prop('checked', false);
-    $('input[value="cards"]').prop('checked', true);
-    loadList();
-    showCards();
+    checkStorage();
+    setTimeout(showCards, 0);
 };
 
 //убирает лоадер после загрузки страницы
@@ -201,20 +249,21 @@ function getCategories(data) {
 
 //строим дерево
 function displayTree(data){
+    console.time('displayTree');
     main__tree.innerHTML = '';
     let i=0;
-    $('.main__tree').append(`<ul><li>Категории<ul id="main__category-root"></ul></li></ul>`);
+    main__tree.insertAdjacentHTML('beforeend', `<ul><li><span class="show">Категории</span><ul id="main__category-root"></ul></li></ul>`);
     let categories = getCategories(data);
     categories.forEach((category)=>{
-        let out = `<li>${category}<ul id="main__category-${category}"></ul></li>`;
-        $('#main__category-root').append(out);
+        let out = `<li><span class="show">${category}</span><ul id="main__category-${category}"></ul></li>`;
+        document.getElementById('main__category-root').insertAdjacentHTML('beforeend', out);
         for (let item of data){
             if(category == item.category){
                 let d = new Date(item.timestamp);
                 let time = d.getDate() + '.' + (d.getMonth()+1) + '.' + d.getFullYear() + " " + d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds();
                 out = `
-                <li>Item ${i++}
-                    <ul>
+                <li><span class="hide">Item ${i++}</span>
+                    <ul hidden>
                         <li class="last-li"><b>Миниатюра:</b><a class="main__item-thumbnail" style="background-image: url(http://contest.elecard.ru/frontend_data/${item.image});" href="http://contest.elecard.ru/frontend_data/${item.image}" target="_blank"></a></li>                    
                         <li class="last-li"><b>Имя:</b> ${item.image.split('/')[1]}</li>
                         <li class="last-li"><b>Категория:</b> ${item.category}</li>
@@ -223,21 +272,11 @@ function displayTree(data){
                     </ul>
                 </li>
                 `;
-                $(`#main__category-${category}`).append(out);
+                document.getElementById(`main__category-${category}`).insertAdjacentHTML('beforeend', out);
             };
         };
     });
-    addSpan();
-};
-
-//добавляем в каждый li в main__tree span с классом show
-function addSpan(){
-    for (let li of main__tree.querySelectorAll('li:not(.last-li)')){
-        let span = document.createElement('span');
-        span.classList.add('show');
-        li.prepend(span);
-        span.append(span.nextSibling);
-    };
+    console.timeEnd('displayTree');
 };
 
 //по клику на любом элементе main__tree сворачивает или разворачивает
